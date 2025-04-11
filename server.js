@@ -1,31 +1,56 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const applicationRoutes = require('./routes/applicationRoutes');
-
-dotenv.config(); // Load environment variables from .env
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+require("dotenv").config(); // Load env variables
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/applications', applicationRoutes);
+// ✅ Use MongoDB URL from .env file
+const MONGO_URL = process.env.MONGO_URL;
 
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+// MongoDB connection
+mongoose.connect(MONGO_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ Connected to MongoDB Atlas"))
+.catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// PORT Fix for Render
-const PORT = process.env.PORT || 10000;
+// Test Schema
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+});
+
+const User = mongoose.model("User", userSchema);
+
+// Test routes
+app.get("/", (req, res) => {
+  res.send("✅ Server is working!");
+});
+
+app.post("/users", async (req, res) => {
+  try {
+    const user = new User(req.body);
+    const saved = await user.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(500).json({ error: "Error saving user" });
+  }
+});
+
+app.get("/users", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Error fetching users" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
